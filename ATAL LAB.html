@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Atal Lab Portal — Full (with Photos)</title>
+
+<style>
+/* ----------- GLOBAL (unchanged look) ---------- */
+body{
+  margin:0;
+  font-family: Poppins, sans-serif;
+  background: linear-gradient(135deg,#0f172a,#1e293b,#334155);
+  background-size: 300% 300%;
+  animation: bg 12s infinite alternate;
+  color:white;
+}
+@keyframes bg{from{background-position:0%;}to{background-position:100%;}}
+
+/* HEADER */
+header{
+  backdrop-filter: blur(10px);
+  padding:15px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky;
+  top:0;
+  background:rgba(255,255,255,0.05);
+  z-index:99;
+}
+header h2{margin:0;font-weight:600;}
+
+/* LOGIN BUTTON */
+.login-btn{
+  background:rgba(255,255,255,0.15);
+  padding:10px 20px;
+  border-radius:8px;
+  cursor:pointer;
+  position:relative;
+  transition:0.2s;
+}
+.login-btn:hover{background:rgba(255,255,255,0.25);}
+
+/* DROPDOWN */
+.dropdown{
+  position:absolute;
+  top:50px;
+  right:0;
+  width:180px;
+  display:none;
+  background:white;
+  color:black;
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:0 5px 18px rgba(0,0,0,0.4);
+}
+.dropdown div{padding:10px;cursor:pointer;transition:0.2s;}
+.dropdown div:hover{background:#eee;}
+
+/* LANDING */
+#landing{ text-align:center; margin-top:100px; padding:20px; }
+#landing h1{ font-size:48px; font-weight:700; }
+#landing p{ font-size:18px; opacity:0.85; }
+
+/* BOX */
+.box{ width:330px; margin:40px auto; background:rgba(255,255,255,0.1); padding:25px; border-radius:15px; backdrop-filter:blur(10px); display:none; animation:fade 0.4s; }
+@keyframes fade{from{opacity:0; transform:translateY(10px);}to{opacity:1; transform:translateY(0);} }
+.box input{ width:100%; padding:12px; border-radius:8px; border:none; margin:10px 0; }
+.box button{ width:100%; padding:12px; background:#10b981; border:none; color:white; border-radius:8px; font-weight:600; cursor:pointer; }
+
+/* DASHBOARDS */
+.container{display:flex;gap:20px;padding:24px;}
+.left{width:300px}
+.dashboard{ display:none; padding:30px; flex:1; }
+.card{ background:rgba(255,255,255,0.12); padding:20px; margin:15px 0; border-radius:12px; backdrop-filter:blur(6px); color:inherit; }
+.logout-btn{ background:#ef4444 !important; margin-top:25px; }
+
+/* Member table */
+.table-wrap{overflow:auto;border-radius:8px;padding:6px}
+table{width:100%;border-collapse:collapse;color:inherit}
+th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.04);background:transparent;vertical-align:middle}
+th{color:rgba(255,255,255,0.7);font-weight:600}
+.search{display:flex;gap:8px;margin-bottom:10px}
+.search input{flex:1;padding:8px;border-radius:8px;border:none}
+
+/* thumbnails */
+.thumb{width:40px;height:40px;border-radius:50%;object-fit:cover;display:inline-block;vertical-align:middle}
+
+/* small UI */
+.small-btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+.pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:13px}
+
+/* floating join button */
+.join-btn{position:fixed;right:14px;bottom:14px;padding:12px 14px;border-radius:12px;border:none;background:linear-gradient(90deg,#10b981,#06b6d4);cursor:pointer;z-index:90}
+
+/* modal */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:200}
+.modal .box-sm{width:520px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:20px;border-radius:12px;backdrop-filter:blur(6px)}
+@media(max-width:600px){.modal .box-sm{width:92%}}
+
+/* toast/notification */
+.toast{position:fixed;right:18px;top:18px;background:#0b1220cc;padding:12px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:220;display:none}
+.badge{position:absolute;top:-8px;right:-8px;background:#ff6b6b;color:#021;padding:5px 7px;border-radius:999px;font-weight:700;font-size:12px}
+
+/* activity log */
+.log{max-height:200px;overflow:auto;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);margin-top:8px}
+.log-item{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.02);font-size:13px}
+
+/* attendance */
+.att-table td, .att-table th{background:transparent}
+
+/* ---------- ADMIN-ONLY elements (hidden until admin logged in) ---------- */
+.admin-only { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Atal Lab Portal</h2>
+
+  <div id="loginButton" class="login-btn" onclick="toggleDropdown(event)">
+    Login
+    <div id="dropdown" class="dropdown">
+      <div onclick="openLogin('admin', event)">Admin Login</div>
+      <div onclick="openLogin('member', event)">Member Login</div>
+    </div>
+    <span id="notifBadge" class="badge" style="display:none">0</span>
+  </div>
+</header>
+
+<!-- LANDING -->
+<section id="landing">
+  <h1>Atal Technologies Pvt Ltd</h1>
+  <p>The Internal Secure Portal for Admin & Registered Members</p>
+</section>
+
+<!-- LOGIN BOXES -->
+<div id="admin-box" class="box">
+  <h3>Admin Login</h3>
+  <input id="admin-user" type="text" placeholder="Admin ID">
+  <input id="admin-pass" type="password" placeholder="Password">
+  <button onclick="adminLogin()">Login</button>
+</div>
+
+<div id="member-box" class="box">
+  <h3>Member Login</h3>
+  <input id="member-user" type="text" placeholder="User ID">
+  <input id="member-pass" type="password" placeholder="Password">
+  <button onclick="memberLogin()">Login</button>
+</div>
+
+<!-- MAIN AREA -->
+<div class="container" style="align-items:flex-start">
+  <aside class="left">
+    <div class="card admin-only" id="quickCard">
+      <h4>Quick</h4>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="small-btn" onclick="exportMembers()">Export JSON</button>
+        <button class="small-btn" onclick="importMembers()">Import</button>
+      </div>
+
+      <div style="margin-top:14px">
+        <div style="font-size:13px;color:rgba(255,255,255,0.7)">Activity Log</div>
+        <div id="activityLog" class="log"></div>
+      </div>
+    </div>
+
+    <div class="card admin-only" id="notifCard">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><b>Notifications</b></div>
+        <div><button class="small-btn" onclick="clearNotifications()">Clear</button></div>
+      </div>
+      <div id="notifList" class="log" style="max-height:160px"></div>
+    </div>
+  </aside>
+
+  <main class="dashboard" id="admin-dashboard">
+    <h2>Admin Dashboard</h2>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><b>Members</b></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="searchMember" placeholder="Search by name / id / phone" oninput="renderTable()" style="padding:8px;border-radius:8px;border:none"/>
+          <button class="small-btn" onclick="openCreateModal()">New</button>
+          <button class="small-btn" onclick="openRequestsModal()">Requests <span id="reqCount" class="pill" style="display:none"></span></button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="membersTable">
+          <thead>
+            <tr><th>Photo</th><th>Name</th><th>Phone</th><th>Email</th><th>Rank</th><th>User ID</th><th>Attendance</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Attendance (Today)</h3>
+      <table id="attTable" class="att-table" border="0" cellpadding="6" style="width:100%"></table>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </main>
+
+  <main class="dashboard" id="member-dashboard">
+    <h2>Member Dashboard</h2>
+
+    <div class="card" style="text-align:center;">
+      <img id="profile-photo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:15px;display:none;">
+      <p><b>Name:</b> <span id="p-name"></span></p>
+      <p><b>Phone:</b> <span id="p-phone"></span></p>
+      <p><b>Email:</b> <span id="p-email"></span></p>
+      <p><b>Rank:</b> <span id="p-rank"></span></p>
+    </div>
+
+    <div style="margin-top:10px">
+      <button class="small-btn" onclick="markAttendance('in')">Check In</button>
+      <button class="small-btn" onclick="markAttendance('out')">Check Out</button>
+      <button class="small-btn" onclick="viewMyAttendance()">View My Attendance</button>
+    </div>
+
+    <div class="card">
+      <h3>My Notifications</h3>
+      <div id="myNotifs" class="log"></div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="modal" class="modal">
+  <div class="box-sm" id="modalBox">
+    <!-- dynamic content -->
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- JOIN BUTTON -->
+<button class="join-btn" onclick="openJoinPrompt()">Join Atal</button>
+
+<script>
+/* ---------------- Constants / LocalStorage keys ---------------- */
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = '1234';
+
+const LS_MEM = 'atal_members_v3';
+const LS_REQ = 'atal_reqs_v3';
+const LS_LOG = 'atal_log_v3';
+const LS_ATT = 'atal_att_v3';
+const LS_NOTIF = 'atal_notif_v3';
+
+/* ---------------- State ---------------- */
+let members = JSON.parse(localStorage.getItem(LS_MEM) || '{}');
+let requests = JSON.parse(localStorage.getItem(LS_REQ) || '[]');
+let activity = JSON.parse(localStorage.getItem(LS_LOG) || '[]');
+let attendance = JSON.parse(localStorage.getItem(LS_ATT) || '{}'); // { userId: [{type:'in'/'out', t:iso}] }
+let notifications = JSON.parse(localStorage.getItem(LS_NOTIF) || '[]');
+let currentMemberId = null; // when member logs in
+let isAdmin = false; // track admin login status
+
+/* ---------------- Helpers ---------------- */
+function saveAll(){
+  localStorage.setItem(LS_MEM, JSON.stringify(members));
+  localStorage.setItem(LS_REQ, JSON.stringify(requests));
+  localStorage.setItem(LS_LOG, JSON.stringify(activity));
+  localStorage.setItem(LS_ATT, JSON.stringify(attendance));
+  localStorage.setItem(LS_NOTIF, JSON.stringify(notifications));
+  renderReqCount();
+  renderNotifBadge();
+}
+
+function pushLog(msg){
+  activity.unshift({t:new Date().toLocaleString(), m:msg});
+  if(activity.length>300) activity.pop();
+  saveAll();
+  renderActivity();
+}
+
+function toast(msg, ms=2000){
+  const t=document.getElementById('toast');
+  t.innerText=msg; t.style.display='block';
+  setTimeout(()=>{ t.style.display='none'; }, ms);
+}
+
+/* ---------------- Render UI ---------------- */
+function renderActivity(){
+  const el=document.getElementById('activityLog');
+  el.innerHTML='';
+  activity.slice(0,50).forEach(a=>{
+    const d=document.createElement('div'); d.className='log-item';
+    d.innerHTML=`<b>[${a.t}]</b> — ${a.m}`; el.appendChild(d);
+  });
+}
+
+/* Badge now only shows when admin is logged in */
+function renderNotifBadge(){
+  const b=document.getElementById('notifBadge');
+  if(!isAdmin){ b.style.display='none'; return; } // <-- important change: hide for non-admins
+  const nCount = notifications.length;
+  if(nCount>0){ b.style.display='inline-block'; b.innerText = nCount; }
+  else b.style.display='none';
+  // My notifs for member view
+  renderMyNotifs();
+}
+
+function renderMyNotifs(){
+  const el=document.getElementById('myNotifs'); if(!el) return;
+  el.innerHTML='';
+  (notifications.filter(n=>n.to===currentMemberId || n.to==='all').slice(0,100)).forEach(n=>{
+    const d=document.createElement('div'); d.className='log-item'; d.innerText = `${n.t} — ${n.message}`; el.appendChild(d);
+  });
+}
+
+function renderReqCount(){
+  const el=document.getElementById('reqCount');
+  if(requests.length>0){ el.style.display='inline-block'; el.innerText = requests.length; }
+  else el.style.display='none';
+}
+
+/* ---------------- Members Table ---------------- */
+function renderTable(){
+  const tbody = document.querySelector('#membersTable tbody');
+  tbody.innerHTML='';
+  const q = (document.getElementById('searchMember')?.value || '').trim().toLowerCase();
+  for(const id in members){
+    const m = members[id];
+    const text = `${m.name} ${m.phone} ${m.email} ${m.rank} ${id}`.toLowerCase();
+    if(q && text.indexOf(q)===-1) continue;
+    const tr = document.createElement('tr');
+    const photoCell = `<td>${m.photo? `<img src="${m.photo}" class="thumb">` : `<div class="thumb" style="background:rgba(255,255,255,0.06);display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:12px">${initials(m.name)}</div>`}</td>`;
+    tr.innerHTML = `${photoCell}
+                    <td>${m.name}</td>
+                    <td>${m.phone}</td>
+                    <td>${m.email}</td>
+                    <td>${m.rank}</td>
+                    <td>${id}</td>
+                    <td>${getTodayStatus(id)}</td>
+                    <td>
+                      <button class="small-btn" onclick="openEditModal('${id}')">Edit</button>
+                      <button class="small-btn" onclick="confirmDelete('${id}')">Delete</button>
+                      <button class="small-btn" onclick="sendNotifTo('${id}')">Notify</button>
+                    </td>`;
+    tbody.appendChild(tr);
+  }
+  renderAttendanceTable();
+}
+
+/* helper to get initials for placeholder */
+function initials(name){
+  if(!name) return '';
+  return name.split(' ').map(s=>s[0]||'').slice(0,2).join('').toUpperCase();
+}
+
+/* attendance - today's status */
+function getTodayStatus(id){
+  const arr = attendance[id] || [];
+  const today = (new Date()).toDateString();
+  const todayEvents = arr.filter(a=> new Date(a.t).toDateString()===today);
+  if(!todayEvents.length) return '—';
+  const last = todayEvents[todayEvents.length-1];
+  return `${last.type.toUpperCase()} @ ${new Date(last.t).toLocaleTimeString()}`;
+}
+
+function renderAttendanceTable(){
+  const el = document.getElementById('attTable');
+  el.innerHTML = '<tr><th>User</th><th>Check-in/out</th></tr>';
+  for(const id in members){
+    const m = members[id];
+    el.innerHTML += `<tr><td>${m.name} (${id})</td><td>${formatTodayAttendance(id)}</td></tr>`;
+  }
+}
+
+function formatTodayAttendance(id){
+  const arr = attendance[id] || [];
+  const today = (new Date()).toDateString();
+  const todayEvents = arr.filter(a=> new Date(a.t).toDateString()===today);
+  if(!todayEvents.length) return '-';
+  return todayEvents.map(e=>`${e.type} @ ${new Date(e.t).toLocaleTimeString()}`).join(' • ');
+}
+
+/* ---------------- Login / Flow ---------------- */
+function toggleDropdown(event){ event.stopPropagation(); const d=document.getElementById('dropdown'); d.style.display = d.style.display==='block'?'none':'block'; }
+function openLogin(type,event){ event.stopPropagation(); document.getElementById('dropdown').style.display='none'; showBox(type); }
+
+function showBox(type){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('admin-box').style.display='none';
+  document.getElementById('member-box').style.display='none';
+  if(type==='admin') document.getElementById('admin-box').style.display='block';
+  else document.getElementById('member-box').style.display='block';
+}
+
+/* ADMIN */
+function adminLogin(){
+  const u=document.getElementById('admin-user').value.trim();
+  const p=document.getElementById('admin-pass').value.trim();
+  if(u===ADMIN_USER && p===ADMIN_PASS){
+    isAdmin = true; // set admin flag
+    // show admin-only elements
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='block');
+    // show dashboard and hide admin login
+    document.getElementById('admin-dashboard').style.display='block';
+    document.getElementById('admin-box').style.display='none';
+    document.getElementById('loginButton').style.display='none';
+    document.querySelector('.join-btn').style.display = 'none';
+    pushLog('Admin logged in');
+    renderTable(); renderActivity(); renderReqCount(); renderNotifBadge();
+  } else alert('Wrong Admin Credentials');
+}
+
+/* MEMBER */
+function memberLogin(){
+  const id=document.getElementById('member-user').value.trim();
+  const pass=document.getElementById('member-pass').value.trim();
+  if(members[id] && members[id].pass===pass){
+    const m=members[id];
+    currentMemberId = id;
+    document.getElementById('p-name').innerText = m.name;
+    document.getElementById('p-phone').innerText = m.phone;
+    document.getElementById('p-email').innerText = m.email;
+    document.getElementById('p-rank').innerText = m.rank;
+    // show photo if exists
+    const img = document.getElementById('profile-photo');
+    if(m.photo){ img.src = m.photo; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
+    document.getElementById('member-dashboard').style.display='block';
+    document.getElementById('member-box').style.display='none';
+    document.getElementById('loginButton').style.display='none';
+    document.querySelector('.join-btn').style.display = 'none';
+    pushLog(`Member ${m.name} logged in`);
+    renderMyNotifs();
+  } else alert('Invalid Credentials');
+}
+
+/* LOGOUT */
+function logout(){
+  currentMemberId = null;
+  isAdmin = false;
+  // hide admin-only again
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
+  document.querySelector('.join-btn').style.display = 'block';
+  location.reload();
+}
+
+/* ---------------- Member CRUD (with photo) ---------------- */
+/* openCreateModal now includes photo input */
+function openCreateModal(){
+  openModal(`
+    <h3>Create Member</h3>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="c-name" placeholder="Name"/>
+      <input id="c-phone" placeholder="Phone"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="c-email" placeholder="Email"/>
+      <input id="c-rank" placeholder="Rank"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="c-id" placeholder="User ID"/>
+      <input id="c-pass" placeholder="Password"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <input id="c-photo" type="file" accept="image/*"/>
+      <div id="c-preview" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:12px">PRE</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="createMemberFromModal()">Save</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+
+  // attach change listener for preview
+  setTimeout(()=>{ 
+    const inp = document.getElementById('c-photo');
+    const prev = document.getElementById('c-preview');
+    if(inp){
+      inp.onchange = e=>{
+        const f = inp.files[0];
+        if(!f){ prev.innerText='PRE'; prev.style.background='rgba(255,255,255,0.04)'; return; }
+        const r = new FileReader();
+        r.onload = ev=>{
+          prev.innerHTML = `<img src="${ev.target.result}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">`;
+        };
+        r.readAsDataURL(f);
+      };
+    }
+  },50);
+}
+
+function createMemberFromModal(){
+  const id=document.getElementById('c-id').value.trim();
+  if(!id){ alert('User ID required'); return;}
+  if(members[id]){ alert('User ID exists'); return; }
+  const name=document.getElementById('c-name').value || '';
+  const phone=document.getElementById('c-phone').value || '';
+  const email=document.getElementById('c-email').value || '';
+  const rank=document.getElementById('c-rank').value || '';
+  const pass=document.getElementById('c-pass').value || '';
+  const file = document.getElementById('c-photo').files[0];
+
+  // if file exists, read it async then save
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      members[id] = { name, phone, email, rank, pass, photo: ev.target.result };
+      pushLog(`Admin created member ${members[id].name} (${id})`);
+      saveAll(); closeModal(); renderTable(); toast('Member created');
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // no photo, still save (photo undefined)
+    members[id] = { name, phone, email, rank, pass };
+    pushLog(`Admin created member ${members[id].name} (${id})`);
+    saveAll(); closeModal(); renderTable(); toast('Member created');
+  }
+}
+
+/* Edit (show current photo and allow change) */
+function openEditModal(id){
+  const m = members[id];
+  if(!m) return;
+  openModal(`
+    <h3>Edit Member</h3>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="e-name" value="${escapeHtml(m.name)}" placeholder="Name"/>
+      <input id="e-phone" value="${escapeHtml(m.phone)}" placeholder="Phone"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="e-email" value="${escapeHtml(m.email)}" placeholder="Email"/>
+      <input id="e-rank" value="${escapeHtml(m.rank)}" placeholder="Rank"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="e-id" value="${escapeHtml(id)}" placeholder="User ID"/>
+      <input id="e-pass" value="${escapeHtml(m.pass||'')}" placeholder="Password"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <input id="e-photo" type="file" accept="image/*"/>
+      <div id="e-preview" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:12px">
+        ${m.photo ? `<img src="${m.photo}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">` : 'PRE'}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="saveEdit('${id}')">Save</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+
+  setTimeout(()=>{
+    const inp = document.getElementById('e-photo');
+    const prev = document.getElementById('e-preview');
+    if(inp){
+      inp.onchange = e=>{
+        const f = inp.files[0];
+        if(!f){ prev.innerHTML = m.photo ? `<img src="${m.photo}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">` : 'PRE'; return; }
+        const r = new FileReader();
+        r.onload = ev=>{
+          prev.innerHTML = `<img src="${ev.target.result}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">`;
+        };
+        r.readAsDataURL(f);
+      };
+    }
+  },50);
+}
+
+function saveEdit(oldId){
+  const id = document.getElementById('e-id').value.trim();
+  if(!id){ alert('User ID required'); return; }
+  const obj = {
+    name:document.getElementById('e-name').value || '',
+    phone:document.getElementById('e-phone').value || '',
+    email:document.getElementById('e-email').value || '',
+    rank:document.getElementById('e-rank').value || '',
+    pass:document.getElementById('e-pass').value || ''
+  };
+  const file = document.getElementById('e-photo').files[0];
+
+  const finishSave = (photoData) => {
+    if(photoData) obj.photo = photoData;
+    // if id changed, remove old
+    if(id !== oldId){
+      delete members[oldId];
+    } else {
+      // preserve old photo if no new photo provided and member had one
+      if(!obj.photo && members[oldId] && members[oldId].photo) obj.photo = members[oldId].photo;
+    }
+    members[id] = obj;
+    pushLog(`Admin edited member ${obj.name} (${id})`);
+    saveAll(); closeModal(); renderTable(); toast('Member updated');
+  };
+
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      finishSave(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    finishSave(null);
+  }
+}
+
+/* Delete */
+function confirmDelete(id){
+  openModal(`<h3>Delete ${escapeHtml(members[id].name)} (${id})?</h3>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="doDelete('${id}')">Yes, Delete</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+function doDelete(id){
+  pushLog(`Admin deleted member ${members[id].name} (${id})`);
+  delete members[id];
+  saveAll(); closeModal(); renderTable(); toast('Deleted');
+}
+
+/* ---------------- Join Requests ---------------- */
+function openJoinPrompt(){
+  const name = prompt('Full name'); if(!name) return;
+  const email = prompt('Email'); if(!email) return;
+  const phone = prompt('Phone'); if(!phone) return;
+  const id = prompt('Choose user id (unique)'); if(!id) return;
+  if(members[id]){ alert('UserID exists'); return; }
+  requests.push({name, email, phone, id, t:new Date().toLocaleString()});
+  pushLog(`New join request from ${name} (${id})`);
+  saveAll(); toast('Join request sent');
+  renderReqCount();
+}
+
+/* ---------------- Requests handling (admin-only) ---------------- */
+function openRequestsModal(){
+  let html = `<h3>Pending Requests</h3><div style="max-height:320px;overflow:auto">`;
+  if(requests.length===0) html += `<div style="padding:10px">No requests</div>`;
+  requests.forEach((r, idx)=>{
+    html += `<div style="padding:10px;border-bottom:1px solid rgba(255,255,255,0.03)"><b>${escapeHtml(r.name)}</b> (${r.id}) — ${escapeHtml(r.email)} • ${escapeHtml(r.phone)} <div style="margin-top:8px">
+      <button onclick="approveRequest(${idx})">Approve</button>
+      <button onclick="denyRequest(${idx})" style="margin-left:8px">Deny</button>
+    </div></div>`;
+  });
+  html += `</div><div style="margin-top:12px"><button onclick="closeModal()">Close</button></div>`;
+  openModal(html);
+}
+
+function approveRequest(idx){
+  const r = requests.splice(idx,1)[0];
+  members[r.id] = {name:r.name, phone:r.phone, email:r.email, rank:'Member', pass:generatePass()};
+  pushLog(`Approved join request: ${r.name} (${r.id})`);
+  notifications.push({t:new Date().toLocaleString(), to:r.id, message:`Your account approved. UserID: ${r.id}`});
+  saveAll(); renderTable(); renderReqCount(); closeModal(); toast('Approved');
+}
+
+function denyRequest(idx){
+  const r = requests.splice(idx,1)[0];
+  pushLog(`Denied join request: ${r.name} (${r.id})`);
+  saveAll(); renderReqCount(); closeModal(); toast('Denied');
+}
+
+/* ---------------- Attendance ---------------- */
+function markAttendance(type){
+  if(!currentMemberId){ alert('Only members can mark attendance'); return; }
+  attendance[currentMemberId] = attendance[currentMemberId] || [];
+  attendance[currentMemberId].push({type, t:new Date().toISOString()});
+  pushLog(`Attendance ${type} by ${currentMemberId}`);
+  saveAll(); toast('Attendance marked');
+  renderAttendanceTable(); renderTable();
+}
+function viewMyAttendance(){
+  if(!currentMemberId) return;
+  const arr = attendance[currentMemberId] || [];
+  let html = `<h3>Attendance for ${escapeHtml(currentMemberId)}</h3>`;
+  if(!arr.length) html += `<div style="padding:10px">No records</div>`;
+  else {
+    html += `<div style="max-height:300px;overflow:auto">`;
+    arr.slice().reverse().forEach(a=> html += `<div class="log-item">${a.type} — ${new Date(a.t).toLocaleString()}</div>`);
+    html += `</div>`;
+  }
+  html += `<div style="margin-top:12px"><button onclick="closeModal()">Close</button></div>`;
+  openModal(html);
+}
+
+/* ---------------- Notifications ---------------- */
+function sendNotifTo(id){
+  if(!isAdmin){ alert('Only admin can send notifications'); return; }
+  const msg = prompt('Message to send to ' + id);
+  if(!msg) return;
+  notifications.push({t:new Date().toLocaleString(), to:id, message:msg});
+  pushLog(`Admin sent notification to ${id}`);
+  saveAll(); renderNotifBadge(); toast('Sent');
+}
+function clearNotifications(){
+  if(!isAdmin){ return; }
+  notifications = []; saveAll(); renderNotifBadge(); toast('Cleared');
+}
+
+/* ---------------- Export / Import ---------------- */
+function exportMembers(){
+  if(!isAdmin){ alert('Only admin can export data'); return; }
+  const data = {members, requests, activity, attendance, notifications};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='atal_backup.json'; a.click(); URL.revokeObjectURL(url);
+  pushLog('Exported data');
+}
+function importMembers(){
+  if(!isAdmin){ alert('Only admin can import data'); return; }
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json';
+  inp.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload = ev=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(data.members) members = data.members;
+        if(data.requests) requests = data.requests;
+        if(data.activity) activity = data.activity;
+        if(data.attendance) attendance = data.attendance;
+        if(data.notifications) notifications = data.notifications;
+        saveAll(); renderTable(); renderActivity(); renderReqCount(); renderNotifBadge(); closeModal(); toast('Imported');
+      }catch(err){ alert('Invalid file'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(html){
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+
+/* ---------------- Utility ---------------- */
+function generatePass(){ return Math.random().toString(36).slice(2,9); }
+function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---------------- Init render & click outside handler ---------------- */
+document.addEventListener('click', ()=>{ const d=document.getElementById('dropdown'); if(d) d.style.display='none'; });
+// initial state: hide admin-only elements (already CSS hidden) and render UI
+renderActivity(); renderTable(); renderReqCount(); renderNotifBadge();
+saveAll();
+
+/* Expose saveMember used earlier for compatibility (no-op if exists) */
+function saveMember(){ openCreateModal(); } // convenience
+
+</script>
+</body>
+</html>
